@@ -2,12 +2,11 @@
   "dependencies": {
     "@fastify/cors": "^8.2.1",
     "@fastify/multipart": "^7.6.0",
-    "fastify": "^4.17.0"
+    "fastify": "^4.17.0",
+    "nodemon": "^2.0.22"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "nodemon server.js"
   },
-  "devDependencies": {
-    "nodemon": "^2.0.22"
-  }
+  "devDependencies": {}
 }

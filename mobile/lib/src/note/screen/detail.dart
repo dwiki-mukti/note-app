@@ -9,11 +9,12 @@ import 'package:my_note/src/note/model/index.dart';
 class NoteDetailScreen extends StatefulWidget {
   // attribbute
   final NoteModel note;
+  final Function(bool) onLeave;
 
   // counstruct
-  NoteDetailScreen({super.key, note})
-      : note = note ?? NoteModel(id: 0, content: "", title: "");
-  // const NoteDetailScreen({super.key, required this.note});
+  NoteDetailScreen({super.key, note, onLeave})
+      : note = note ?? NoteModel(id: 0, content: "", title: ""),
+        onLeave = onLeave ?? ((val) {});
 
   // view
   @override
@@ -24,7 +25,7 @@ class _NoteDetailState extends State<NoteDetailScreen> {
   // attribute
   final TextEditingController controllerTitle = TextEditingController();
   final TextEditingController controllerContent = TextEditingController();
-  bool isSync = true;
+  late int noteId;
   Timer? debounce;
 
   // method
@@ -35,9 +36,9 @@ class _NoteDetailState extends State<NoteDetailScreen> {
       String content = controllerContent.text.toString();
 
       // hit BE
-      if (widget.note.id > 0) {
+      if (noteId > 0) {
         http
-            .put(Uri.parse('http://127.0.0.1:3000/note/${widget.note.id}'),
+            .put(Uri.parse('http://127.0.0.1:3000/note/${noteId}'),
                 headers: {"Content-Type": "application/json; charset=UTF-8"},
                 body: jsonEncode(({"title": title, "content": content})))
             .then((value) {
@@ -52,6 +53,9 @@ class _NoteDetailState extends State<NoteDetailScreen> {
                 body: jsonEncode(({"title": title, "content": content})))
             .then((value) {
           log('response sync note (on NoteDetailScreen): ${value.body}');
+          setState(() {
+            noteId = json.decode(value.body)['note']['id'];
+          });
 
           return value;
         });
@@ -62,9 +66,10 @@ class _NoteDetailState extends State<NoteDetailScreen> {
   // onDidMount
   @override
   void initState() {
+    super.initState();
     controllerTitle.text = widget.note.title;
     controllerContent.text = widget.note.content;
-    super.initState();
+    noteId = widget.note.id;
   }
 
   // onMount
@@ -77,36 +82,41 @@ class _NoteDetailState extends State<NoteDetailScreen> {
   // view
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: SingleChildScrollView(
-          child: Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: controllerTitle,
-              onChanged: syncBackend,
-              maxLines: 1,
-              style: const TextStyle(fontSize: 20),
-              decoration: const InputDecoration.collapsed(hintText: "Judul"),
+    return WillPopScope(
+        child: Scaffold(
+          appBar: AppBar(),
+          body: SingleChildScrollView(
+              child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                TextField(
+                  controller: controllerTitle,
+                  onChanged: syncBackend,
+                  maxLines: 1,
+                  style: const TextStyle(fontSize: 20),
+                  decoration:
+                      const InputDecoration.collapsed(hintText: "Judul"),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: TextField(
+                    controller: controllerContent,
+                    onChanged: syncBackend,
+                    minLines: 5,
+                    maxLines: null,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: const InputDecoration.collapsed(
+                        hintText: "Enter your text here"),
+                  ),
+                )
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: TextField(
-                controller: controllerContent,
-                onChanged: syncBackend,
-                minLines: 5,
-                maxLines: null,
-                style: const TextStyle(fontSize: 14),
-                decoration: const InputDecoration.collapsed(
-                    hintText: "Enter your text here"),
-              ),
-            )
-          ],
+          )),
         ),
-      )),
-    );
-    ;
+        onWillPop: () {
+          widget.onLeave(true);
+          return Future.value(true);
+        });
   }
 }

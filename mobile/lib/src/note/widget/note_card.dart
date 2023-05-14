@@ -4,16 +4,29 @@ import 'package:my_note/src/note/model/index.dart';
 
 class NoteCard extends StatelessWidget {
   final NoteModel note;
+  final Function(int) onLongPress;
+  final Function(bool) onLeaveNoteDetailScreen;
 
-  const NoteCard({super.key, required this.note});
+  const NoteCard(
+      {super.key,
+      required this.note,
+      required this.onLongPress,
+      onLeaveNoteDetailScreen})
+      : onLeaveNoteDetailScreen = onLeaveNoteDetailScreen ?? Function;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
         onTap: () {
           Navigator.push(context, MaterialPageRoute(builder: (context) {
-            return NoteDetailScreen(note: note);
+            return NoteDetailScreen(
+              note: note,
+              onLeave: onLeaveNoteDetailScreen,
+            );
           }));
+        },
+        onLongPress: () {
+          onLongPress(note.id);
         },
         child: Card(
           child: Padding(

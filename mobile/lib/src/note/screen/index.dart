@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_note/src/note/screen/detail.dart';
 import 'package:my_note/src/note/model/index.dart';
-// import 'package:my_note/src/note/widget/note_card.dart';
+import 'package:my_note/src/note/widget/note_card.dart';
 
 class NoteScreenIndex extends StatefulWidget {
   const NoteScreenIndex({super.key});
@@ -32,13 +32,32 @@ class _NoteScreenIndexState extends State<NoteScreenIndex> {
     }
   }
 
+  Future<List<NoteModel>> deleteNews() async {
+    log('start delete note (on NoteScreenIndex)');
+    final response =
+        await http.delete(Uri.parse('http://127.0.0.1:3000/note/$idDeleted'));
+    if (response.statusCode == 200) {
+      var decodedResponse = json.decode(response.body);
+      log('response delete data notes (on NoteScreenIndex): ${decodedResponse['notes']}');
+      List<NoteModel> dataNotes = (decodedResponse['notes'] as List)
+          .map((item) => NoteModel.fromJson(item))
+          .toList();
+      setState(() {
+        idDeleted = 0;
+      });
+
+      return dataNotes;
+    } else {
+      throw Exception({"message": "Failed to load News"});
+    }
+  }
+
   // init var list notes
   late Future<List<NoteModel>> notes;
   int idDeleted = 0;
 
   @override
   void initState() {
-    // !!! HERE !!!
     notes = fetchNotes();
     super.initState();
   }
@@ -49,7 +68,7 @@ class _NoteScreenIndexState extends State<NoteScreenIndex> {
       appBar: AppBar(
         title: const Text('Catatan'),
         actions: (idDeleted > 0)
-            ? [
+            ? ([
                 InkWell(
                     onTap: () {
                       setState(() {
@@ -64,15 +83,9 @@ class _NoteScreenIndexState extends State<NoteScreenIndex> {
                       ),
                     )),
                 InkWell(
-                  onTap: () async {
-                    log('start delete note (on NoteScreenIndex)');
-                    final response = await http.delete(
-                        Uri.parse('http://127.0.0.1:3000/note/$idDeleted'));
-                    log('response delete note (on NoteScreenIndex): ${response.body}');
-
+                  onTap: () {
                     setState(() {
-                      idDeleted = 0;
-                      notes = fetchNotes();
+                      notes = deleteNews();
                     });
                   },
                   child: const Padding(
@@ -82,7 +95,7 @@ class _NoteScreenIndexState extends State<NoteScreenIndex> {
                             Text("DELETE", style: TextStyle(color: Colors.red)),
                       )),
                 )
-              ]
+              ])
             : [],
       ),
       body: Padding(
@@ -94,44 +107,21 @@ class _NoteScreenIndexState extends State<NoteScreenIndex> {
                 return ListView.builder(
                     itemCount: (snapshot.data as List).length,
                     itemBuilder: (ctx, index) {
-                      // return NoteCard(
-                      //   note: (snapshot.data as List)[index],
-                      // );
-                      NoteModel note = (snapshot.data as List)[index];
-                      return InkWell(
-                          onTap: () {
-                            Navigator.push(context,
-                                MaterialPageRoute(builder: (context) {
-                              return NoteDetailScreen(note: note);
-                            }));
-                          },
-                          onLongPress: () {
+                      return NoteCard(
+                        note: (snapshot.data as List)[index],
+                        onLongPress: (noteId) {
+                          setState(() {
+                            idDeleted = noteId;
+                          });
+                        },
+                        onLeaveNoteDetailScreen: (val) {
+                          if (val) {
                             setState(() {
-                              idDeleted = note.id;
+                              notes = fetchNotes();
                             });
-                          },
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: SizedBox(
-                                width: 1200,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 10),
-                                      child: Text(note.title),
-                                    ),
-                                    Text(
-                                      (note.content),
-                                      style: const TextStyle(fontSize: 12),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ));
+                          }
+                        },
+                      );
                     });
               } else {
                 return Text('error: ${snapshot.error}');
@@ -142,7 +132,13 @@ class _NoteScreenIndexState extends State<NoteScreenIndex> {
           child: const Icon(Icons.add),
           onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) {
-              return NoteDetailScreen();
+              return NoteDetailScreen(onLeave: (val) {
+                if (val) {
+                  setState(() {
+                    notes = fetchNotes();
+                  });
+                }
+              });
             }));
           }),
     );

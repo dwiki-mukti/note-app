@@ -56,11 +56,12 @@ server.post('/note', (request, response) => {
         }
     };
     */
-    notes.push({
+    const newNote = {
         id: Date.now(),
         title: (bodyReq?.title) ?? '',
         content: (bodyReq?.content) ?? ''
-    });
+    }
+    notes.push(newNote);
 
     // sync data
     fs.writeFile(dbFilePath, JSON.stringify(notes), err => {
@@ -68,7 +69,7 @@ server.post('/note', (request, response) => {
     });
 
     // response
-    return response.send({ notes });
+    return response.send({ note: newNote });
 })
 
 
@@ -167,7 +168,7 @@ server.delete('/note/:id', (request, response) => {
 
     // response
     console.log(`Success Delete ${id}!`);
-    return response.send({ newNotes })
+    return response.send({ notes: newNotes })
 });
 
 /* end registering route */
